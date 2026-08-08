@@ -41,6 +41,10 @@ final class AmbientContentView: NSView {
 
     override func layout() {
         super.layout()
+        let scaleFactor = window?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 2
+        for bubbleLayer in bubbleLayers {
+            bubbleLayer.contentsScale = scaleFactor
+        }
         if simulation.resize(to: bounds.size) {
             rebuildLayers()
         }
