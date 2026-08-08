@@ -4,7 +4,7 @@ final class AmbientContentView: NSView {
     var onDismiss: (() -> Void)?
 
     private let titleLabel = NSTextField(labelWithString: "Daydream")
-    private let subtitleLabel = NSTextField(labelWithString: "Click or Esc to dismiss · Menu bar to toggle")
+    private let subtitleLabel = NSTextField(labelWithString: "Click or Esc to dismiss · Click this display's menu bar icon to toggle")
     private let clockLabel = NSTextField(labelWithString: "")
     private var clockTimer: Timer?
     private let clockFormatter: DateFormatter = {
