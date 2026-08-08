@@ -1,0 +1,5 @@
+.build/
+Daydream.app/
+*.xcodeproj/
+DerivedData/
+.DS_Store
