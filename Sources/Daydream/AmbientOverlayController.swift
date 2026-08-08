@@ -1,5 +1,4 @@
 import AppKit
-import CoreGraphics
 
 final class AmbientWindow: NSWindow {
     override var canBecomeKey: Bool { true }
@@ -7,32 +6,57 @@ final class AmbientWindow: NSWindow {
 }
 
 final class AmbientOverlayController {
+    private struct Session {
+        let window: AmbientWindow
+        let contentView: AmbientContentView
+        let displayID: CGDirectDisplayID
+    }
+
     var onStateChange: (() -> Void)?
 
-    private var window: NSWindow?
+    private var session: Session?
     private var escapeMonitor: Any?
     private var screenObserver: NSObjectProtocol?
 
-    var isEnabled: Bool { window != nil }
+    var isEnabled: Bool { session != nil }
 
-    func enable() {
-        guard window == nil else { return }
+    func toggle(on screen: NSScreen) {
+        let displayID = screen.displayID
 
-        guard let screen = builtinScreen() else {
-            presentAlert(
-                title: "No Built-in Display",
-                message: "Daydream could not find the MacBook built-in screen. Is the lid closed?"
-            )
+        if session?.displayID == displayID {
+            disable()
             return
         }
 
-        let contentView = AmbientContentView(frame: screen.frame)
+        if let session {
+            move(session, to: screen, displayID: displayID)
+            return
+        }
+
+        present(on: screen, displayID: displayID)
+    }
+
+    func disable() {
+        guard let session else { return }
+
+        session.contentView.stop()
+        session.window.orderOut(nil)
+        self.session = nil
+        removeEscapeMonitor()
+        removeScreenObserver()
+        onStateChange?()
+    }
+
+    private func present(on screen: NSScreen, displayID: CGDirectDisplayID) {
+        let frame = screen.visibleFrame
+        let contentView = AmbientContentView(frame: NSRect(origin: .zero, size: frame.size))
+        contentView.autoresizingMask = [.width, .height]
         contentView.onDismiss = { [weak self] in
             self?.disable()
         }
 
         let overlayWindow = AmbientWindow(
-            contentRect: screen.frame,
+            contentRect: frame,
             styleMask: .borderless,
             backing: .buffered,
             defer: false,
@@ -45,38 +69,23 @@ final class AmbientOverlayController {
         overlayWindow.isReleasedWhenClosed = false
         overlayWindow.ignoresMouseEvents = false
         overlayWindow.contentView = contentView
-        overlayWindow.setFrame(screen.frame, display: true)
+        overlayWindow.setFrame(frame, display: true)
         overlayWindow.makeKeyAndOrderFront(nil)
 
-        window = overlayWindow
+        session = Session(window: overlayWindow, contentView: contentView, displayID: displayID)
         contentView.start()
         installEscapeMonitor()
         observeScreenChanges()
         onStateChange?()
     }
 
-    func disable() {
-        guard let window else { return }
-
-        if let contentView = window.contentView as? AmbientContentView {
-            contentView.stop()
-        }
-        window.orderOut(nil)
-        self.window = nil
-        removeEscapeMonitor()
-        removeScreenObserver()
-        onStateChange?()
-    }
-
-    private func builtinScreen() -> NSScreen? {
-        NSScreen.screens.first { screen in
-            guard
-                let displayID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
-            else {
-                return false
-            }
-            return CGDisplayIsBuiltin(displayID.uint32Value) != 0
-        }
+    private func move(_ session: Session, to screen: NSScreen, displayID: CGDirectDisplayID) {
+        session.window.setFrame(screen.visibleFrame, display: true)
+        self.session = Session(
+            window: session.window,
+            contentView: session.contentView,
+            displayID: displayID
+        )
     }
 
     private func installEscapeMonitor() {
@@ -116,21 +125,13 @@ final class AmbientOverlayController {
     }
 
     private func handleScreenChange() {
-        guard let window else { return }
+        guard let session else { return }
 
-        guard let screen = builtinScreen() else {
+        guard let screen = NSScreen.screens.first(where: { $0.displayID == session.displayID }) else {
             disable()
             return
         }
 
-        window.setFrame(screen.frame, display: true)
-    }
-
-    private func presentAlert(title: String, message: String) {
-        let alert = NSAlert()
-        alert.messageText = title
-        alert.informativeText = message
-        alert.alertStyle = .informational
-        alert.runModal()
+        session.window.setFrame(screen.visibleFrame, display: true)
     }
 }

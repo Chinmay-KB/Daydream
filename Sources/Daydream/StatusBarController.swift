@@ -3,24 +3,11 @@ import AppKit
 final class StatusBarController {
     private let overlayController: AmbientOverlayController
     private let statusItem: NSStatusItem
-    private let toggleItem = NSMenuItem()
+    private let menu = NSMenu()
 
     init(overlayController: AmbientOverlayController) {
         self.overlayController = overlayController
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-
-        if let button = statusItem.button {
-            button.image = NSImage(
-                systemSymbolName: "moon.zzz",
-                accessibilityDescription: "Daydream"
-            )
-        }
-
-        let menu = NSMenu()
-        toggleItem.target = self
-        toggleItem.action = #selector(toggleDaydream)
-        menu.addItem(toggleItem)
-        menu.addItem(.separator())
 
         let quitItem = NSMenuItem(
             title: "Quit Daydream",
@@ -30,20 +17,34 @@ final class StatusBarController {
         quitItem.target = self
         menu.addItem(quitItem)
 
-        statusItem.menu = menu
-        overlayController.onStateChange = { [weak self] in
-            self?.refreshMenuTitle()
+        if let button = statusItem.button {
+            button.image = NSImage(
+                systemSymbolName: "moon.zzz",
+                accessibilityDescription: "Daydream"
+            )
+            button.toolTip = "Click a display's menu bar icon to Daydream that screen"
+            button.target = self
+            button.action = #selector(statusItemClicked(_:))
+            button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         }
-        refreshMenuTitle()
+
+        overlayController.onStateChange = { [weak self] in
+            self?.refreshIcon()
+        }
+        refreshIcon()
     }
 
     @objc
-    private func toggleDaydream() {
-        if overlayController.isEnabled {
-            overlayController.disable()
-        } else {
-            overlayController.enable()
+    private func statusItemClicked(_ sender: Any?) {
+        guard let event = NSApp.currentEvent else { return }
+
+        if event.type == .rightMouseUp || event.modifierFlags.contains(.control) {
+            showMenu()
+            return
         }
+
+        guard let screen = statusItem.button?.window?.screen else { return }
+        overlayController.toggle(on: screen)
     }
 
     @objc
@@ -51,7 +52,17 @@ final class StatusBarController {
         NSApp.terminate(nil)
     }
 
-    private func refreshMenuTitle() {
-        toggleItem.title = overlayController.isEnabled ? "Turn Off Daydream" : "Turn On Daydream"
+    private func showMenu() {
+        guard let button = statusItem.button else { return }
+        let location = NSPoint(x: 0, y: button.bounds.height + 2)
+        menu.popUp(positioning: nil, at: location, in: button)
+    }
+
+    private func refreshIcon() {
+        let symbolName = overlayController.isEnabled ? "moon.zzz.fill" : "moon.zzz"
+        statusItem.button?.image = NSImage(
+            systemSymbolName: symbolName,
+            accessibilityDescription: "Daydream"
+        )
     }
 }

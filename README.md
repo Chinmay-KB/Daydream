@@ -1,13 +1,15 @@
 # Daydream
 
-A tiny macOS menu bar app that puts a screensaver-like overlay on your **MacBook built-in display only** — so you can keep working on an external monitor.
+A tiny macOS menu bar app that puts a screensaver-like overlay on **one display at a time** — click the icon on a display's menu bar to Daydream that screen.
 
 ## What it does
 
 - Lives in the menu bar (no Dock icon)
-- **Turn On Daydream** covers the laptop screen
-- External displays stay untouched
-- Click the overlay, press Esc, or use the menu to turn it off
+- **Click the icon on a display** to cover that display (below the menu bar, so the icon stays usable)
+- Click the same display's icon again to turn it off
+- Click a different display's icon to move Daydream there
+- Click the overlay or press Esc to dismiss
+- Right-click the icon for Quit
 
 ## Requirements
 
