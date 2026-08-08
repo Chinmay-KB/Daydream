@@ -62,8 +62,9 @@ final class AmbientOverlayController {
             defer: false,
             screen: screen
         )
-        overlayWindow.isOpaque = true
-        overlayWindow.backgroundColor = .black
+        overlayWindow.isOpaque = false
+        overlayWindow.backgroundColor = .clear
+        overlayWindow.hasShadow = false
         overlayWindow.level = .screenSaver
         overlayWindow.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
         overlayWindow.isReleasedWhenClosed = false

@@ -1,23 +1,19 @@
 import AppKit
+import QuartzCore
 
 final class AmbientContentView: NSView {
     var onDismiss: (() -> Void)?
 
-    private let titleLabel = NSTextField(labelWithString: "Daydream")
-    private let subtitleLabel = NSTextField(labelWithString: "Click or Esc to dismiss · Click this display's menu bar icon to toggle")
-    private let clockLabel = NSTextField(labelWithString: "")
-    private var clockTimer: Timer?
-    private let clockFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEE d MMM  HH:mm:ss"
-        return formatter
-    }()
+    private let simulation = BubblesSimulation()
+    private var displayLink: CADisplayLink?
+    private var bubbleLayers: [CALayer] = []
+    private var lastTimestamp: CFTimeInterval = 0
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
-        layer?.backgroundColor = NSColor.black.cgColor
-        configureLabels()
+        layer?.backgroundColor = NSColor.clear.cgColor
+        layer?.isOpaque = false
     }
 
     @available(*, unavailable)
@@ -26,52 +22,102 @@ final class AmbientContentView: NSView {
     }
 
     func start() {
-        updateClock()
-        clockTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
-            self?.updateClock()
-        }
+        stop()
+        resetSimulationAndLayers()
+        lastTimestamp = 0
+
+        let link = displayLink(target: self, selector: #selector(handleDisplayLink(_:)))
+        link.add(to: .main, forMode: .common)
+        displayLink = link
     }
 
     func stop() {
-        clockTimer?.invalidate()
-        clockTimer = nil
+        displayLink?.invalidate()
+        displayLink = nil
+        lastTimestamp = 0
+        bubbleLayers.forEach { $0.removeFromSuperlayer() }
+        bubbleLayers.removeAll(keepingCapacity: true)
     }
 
     override func layout() {
         super.layout()
-
-        let width = bounds.width
-        let height = bounds.height
-        let centerY = height * 0.5
-
-        titleLabel.frame = NSRect(x: 0, y: centerY + 12, width: width, height: 44)
-        subtitleLabel.frame = NSRect(x: 0, y: centerY - 24, width: width, height: 24)
-        clockLabel.frame = NSRect(x: 0, y: centerY - 72, width: width, height: 28)
+        let scaleFactor = window?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 2
+        for bubbleLayer in bubbleLayers {
+            bubbleLayer.contentsScale = scaleFactor
+        }
+        if simulation.resize(to: bounds.size) {
+            rebuildLayers()
+        }
     }
+
+    override var isOpaque: Bool { false }
 
     override func mouseDown(with event: NSEvent) {
         onDismiss?()
     }
 
-    private func configureLabels() {
-        for label in [titleLabel, subtitleLabel, clockLabel] {
-            label.alignment = .center
-            label.textColor = .white
-            label.backgroundColor = .clear
-            label.isBezeled = false
-            label.isEditable = false
-            label.isSelectable = false
-            addSubview(label)
+    @objc
+    private func handleDisplayLink(_ link: CADisplayLink) {
+        let timestamp = link.targetTimestamp
+        if lastTimestamp == 0 {
+            lastTimestamp = timestamp
+            return
         }
 
-        titleLabel.font = NSFont.systemFont(ofSize: 36, weight: .medium)
-        subtitleLabel.font = NSFont.systemFont(ofSize: 14, weight: .regular)
-        subtitleLabel.textColor = NSColor.white.withAlphaComponent(0.65)
-        clockLabel.font = NSFont.monospacedDigitSystemFont(ofSize: 18, weight: .regular)
-        clockLabel.textColor = NSColor.white.withAlphaComponent(0.85)
+        let delta = max(0, timestamp - lastTimestamp)
+        lastTimestamp = timestamp
+        simulation.step(deltaTime: delta)
+        syncLayers()
     }
 
-    private func updateClock() {
-        clockLabel.stringValue = clockFormatter.string(from: Date())
+    private func resetSimulationAndLayers() {
+        simulation.reset(in: bounds.size)
+        rebuildLayers()
+    }
+
+    private func rebuildLayers() {
+        bubbleLayers.forEach { $0.removeFromSuperlayer() }
+        bubbleLayers.removeAll(keepingCapacity: true)
+
+        let scaleFactor = window?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 2
+        guard let host = layer else { return }
+
+        for bubble in simulation.bubbles {
+            let bubbleLayer = CALayer()
+            bubbleLayer.contentsGravity = .resize
+            bubbleLayer.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+            bubbleLayer.contentsScale = scaleFactor
+            bubbleLayer.allowsEdgeAntialiasing = true
+            bubbleLayer.edgeAntialiasingMask = [.layerLeftEdge, .layerRightEdge, .layerTopEdge, .layerBottomEdge]
+            bubbleLayer.contents = BubbleSpriteCache.image(for: bubble.hue)
+            bubbleLayer.isHidden = !bubble.isActive
+            host.addSublayer(bubbleLayer)
+            bubbleLayers.append(bubbleLayer)
+        }
+
+        syncLayers()
+    }
+
+    private func syncLayers() {
+        let bubbles = simulation.bubbles
+        guard bubbles.count == bubbleLayers.count else {
+            rebuildLayers()
+            return
+        }
+
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+
+        for index in bubbles.indices {
+            let bubble = bubbles[index]
+            let bubbleLayer = bubbleLayers[index]
+            let diameter = max(bubble.radius * 2, 1)
+            bubbleLayer.isHidden = !bubble.isActive
+            bubbleLayer.bounds = CGRect(x: 0, y: 0, width: diameter, height: diameter)
+            bubbleLayer.position = bubble.position
+            bubbleLayer.zPosition = bubble.position.y
+        }
+
+        CATransaction.commit()
     }
 }
