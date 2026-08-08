@@ -36,9 +36,8 @@ final class StatusBarController {
 
     @objc
     private func statusItemClicked(_ sender: Any?) {
-        guard let event = NSApp.currentEvent else { return }
-
-        if event.type == .rightMouseUp || event.modifierFlags.contains(.control) {
+        if let event = NSApp.currentEvent,
+           event.type == .rightMouseUp || event.modifierFlags.contains(.control) {
             showMenu()
             return
         }

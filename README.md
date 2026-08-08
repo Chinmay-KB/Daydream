@@ -1,35 +1,21 @@
 # Daydream
 
-A tiny macOS menu bar app that puts a screensaver-like overlay on **one display at a time** — click the icon on a display's menu bar to Daydream that screen.
+A small Mac menu bar app that puts floating bubbles on one screen while you work on another — like the old Windows Bubbles screensaver.
 
-## What it does
+## How to use
 
-- Lives in the menu bar (no Dock icon)
-- **Click the icon on a display** to cover that display (below the menu bar, so the icon stays usable)
-- Click the same display's icon again to turn it off
-- Click a different display's icon to move Daydream there
-- Click the overlay or press Esc to dismiss
-- Right-click the icon for Quit
-
-## Requirements
-
-- macOS 13+
-- Xcode / Swift toolchain
-
-## Run
+1. Build and open the app:
 
 ```bash
 ./scripts/run.sh
 ```
 
-This builds a release binary, packages `Daydream.app`, and opens it.
+2. Click the moon icon in the menu bar on the screen you want to Daydream.
+3. Click the same icon again, click the bubbles, or press Esc to turn it off.
+4. Right-click the icon to quit.
 
-Or build only:
+## Notes
 
-```bash
-swift build -c release
-```
-
-## Status
-
-Proof of concept. Overlay is a simple black panel with a clock — richer visuals (e.g. bubbles) can come later.
+- Works on macOS 14 or later
+- Needs Xcode / the Swift tools installed
+- Only one screen at a time

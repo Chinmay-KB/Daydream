@@ -4,7 +4,7 @@ import PackageDescription
 let package = Package(
     name: "Daydream",
     platforms: [
-        .macOS(.v13)
+        .macOS(.v14)
     ],
     targets: [
         .executableTarget(
