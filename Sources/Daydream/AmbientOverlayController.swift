@@ -21,7 +21,7 @@ final class AmbientOverlayController {
     var isEnabled: Bool { session != nil }
 
     func toggle(on screen: NSScreen) {
-        let displayID = screen.displayID
+        guard let displayID = screen.displayID else { return }
 
         if session?.displayID == displayID {
             disable()
