@@ -29,7 +29,7 @@ For a local ad-hoc signature and DMG:
 ./scripts/create-dmg.sh .build/Daydream-app/Daydream.app .build/Daydream-v0.1.0.dmg
 ```
 
-`./scripts/run.sh` builds version `0.1.0` and opens the app.
+`./scripts/run.sh` builds version `0.1.0` by default and opens the app. Pass another release tag when needed, such as `./scripts/run.sh v0.2.0`.
 
 ## Release
 
