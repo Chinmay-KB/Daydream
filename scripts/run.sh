@@ -4,13 +4,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-swift build -c release
+"$ROOT/scripts/build-app.sh" v0.1.0
 
-APP="$ROOT/Daydream.app"
-rm -rf "$APP"
-mkdir -p "$APP/Contents/MacOS"
-cp "$ROOT/.build/release/Daydream" "$APP/Contents/MacOS/Daydream"
-cp "$ROOT/Info.plist" "$APP/Contents/Info.plist"
+APP="$ROOT/.build/Daydream-app/Daydream.app"
 
 echo "Built $APP"
 open "$APP"
