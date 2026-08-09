@@ -19,7 +19,7 @@ final class StatusBarController {
 
         if let button = statusItem.button {
             button.image = DaydreamIcon.statusItemImage(isActive: false)
-            button.toolTip = "Click a display's menu bar icon to Daydream that screen"
+            button.toolTip = "Click each display's menu bar icon to Daydream that screen independently"
             button.target = self
             button.action = #selector(statusItemClicked(_:))
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])

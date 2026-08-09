@@ -2,7 +2,7 @@
 
 ![Daydream Orbit Bubble](Design/LogoConcepts/orbit-bubble.svg)
 
-Daydream is a small Mac menu bar app that puts floating bubbles on one screen while you work on another.
+Daydream is a small Mac menu bar app that puts floating bubbles on any screen you choose. Each display can daydream on its own.
 
 ## Download
 
@@ -11,8 +11,8 @@ When a GitHub Release is available, download its ZIP or DMG from the [Releases p
 ## Use
 
 1. Open `Daydream.app` from the DMG or ZIP.
-2. Click the bubble mark in the menu bar on the screen you want to Daydream.
-3. Click the mark again, click the bubbles, or press Esc to turn it off.
+2. Click the bubble mark in the menu bar on each screen you want to Daydream. Screens stay independent.
+3. Click the mark again on that screen, click its bubbles, or press Esc to turn that screen off.
 4. Right-click the mark to quit.
 
 ## Build locally
