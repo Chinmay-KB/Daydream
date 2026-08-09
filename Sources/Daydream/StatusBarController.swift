@@ -18,11 +18,8 @@ final class StatusBarController {
         menu.addItem(quitItem)
 
         if let button = statusItem.button {
-            button.image = NSImage(
-                systemSymbolName: "moon.zzz",
-                accessibilityDescription: "Daydream"
-            )
-            button.toolTip = "Click a display's menu bar icon to Daydream that screen"
+            button.image = DaydreamIcon.statusItemImage(isActive: false)
+            button.toolTip = "Click each display's menu bar icon to Daydream that screen independently"
             button.target = self
             button.action = #selector(statusItemClicked(_:))
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
@@ -59,10 +56,8 @@ final class StatusBarController {
     }
 
     private func refreshIcon() {
-        let symbolName = overlayController.isEnabled ? "moon.zzz.fill" : "moon.zzz"
-        statusItem.button?.image = NSImage(
-            systemSymbolName: symbolName,
-            accessibilityDescription: "Daydream"
+        statusItem.button?.image = DaydreamIcon.statusItemImage(
+            isActive: overlayController.isEnabled
         )
     }
 }

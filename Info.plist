@@ -6,6 +6,8 @@
 	<string>Daydream</string>
 	<key>CFBundleIdentifier</key>
 	<string>hobby.daydream</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
 	<key>CFBundleName</key>
 	<string>Daydream</string>
 	<key>CFBundlePackageType</key>

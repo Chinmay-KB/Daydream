@@ -14,22 +14,17 @@ final class AmbientOverlayController {
 
     var onStateChange: (() -> Void)?
 
-    private var session: Session?
+    private var sessions: [CGDirectDisplayID: Session] = [:]
     private var escapeMonitor: Any?
     private var screenObserver: NSObjectProtocol?
 
-    var isEnabled: Bool { session != nil }
+    var isEnabled: Bool { !sessions.isEmpty }
 
     func toggle(on screen: NSScreen) {
         guard let displayID = screen.displayID else { return }
 
-        if session?.displayID == displayID {
-            disable()
-            return
-        }
-
-        if let session {
-            move(session, to: screen, displayID: displayID)
+        if sessions[displayID] != nil {
+            disable(displayID: displayID)
             return
         }
 
@@ -37,14 +32,34 @@ final class AmbientOverlayController {
     }
 
     func disable() {
-        guard let session else { return }
+        let displayIDs = Array(sessions.keys)
+        guard !displayIDs.isEmpty else { return }
 
-        session.contentView.stop()
-        session.window.orderOut(nil)
-        self.session = nil
+        for displayID in displayIDs {
+            tearDownSession(displayID: displayID)
+        }
         removeEscapeMonitor()
         removeScreenObserver()
         onStateChange?()
+    }
+
+    private func disable(displayID: CGDirectDisplayID) {
+        guard sessions[displayID] != nil else { return }
+
+        tearDownSession(displayID: displayID)
+        if sessions.isEmpty {
+            removeEscapeMonitor()
+            removeScreenObserver()
+        }
+        onStateChange?()
+    }
+
+    private func tearDownSession(displayID: CGDirectDisplayID) {
+        guard let session = sessions.removeValue(forKey: displayID) else { return }
+        session.contentView.onDismiss = nil
+        session.contentView.stop()
+        session.window.orderOut(nil)
+        session.window.close()
     }
 
     private func present(on screen: NSScreen, displayID: CGDirectDisplayID) {
@@ -52,7 +67,7 @@ final class AmbientOverlayController {
         let contentView = AmbientContentView(frame: NSRect(origin: .zero, size: frame.size))
         contentView.autoresizingMask = [.width, .height]
         contentView.onDismiss = { [weak self] in
-            self?.disable()
+            self?.disable(displayID: displayID)
         }
 
         let overlayWindow = AmbientWindow(
@@ -73,30 +88,41 @@ final class AmbientOverlayController {
         overlayWindow.setFrame(frame, display: true)
         overlayWindow.makeKeyAndOrderFront(nil)
 
-        session = Session(window: overlayWindow, contentView: contentView, displayID: displayID)
+        sessions[displayID] = Session(
+            window: overlayWindow,
+            contentView: contentView,
+            displayID: displayID
+        )
         contentView.start()
         installEscapeMonitor()
         observeScreenChanges()
         onStateChange?()
     }
 
-    private func move(_ session: Session, to screen: NSScreen, displayID: CGDirectDisplayID) {
-        session.window.setFrame(screen.visibleFrame, display: true)
-        self.session = Session(
-            window: session.window,
-            contentView: session.contentView,
-            displayID: displayID
-        )
-    }
-
     private func installEscapeMonitor() {
-        removeEscapeMonitor()
+        guard escapeMonitor == nil else { return }
+
         escapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             if event.keyCode == 53 {
-                self?.disable()
+                self?.disableKeySession()
                 return nil
             }
             return event
+        }
+    }
+
+    private func disableKeySession() {
+        if let keyWindow = NSApp.keyWindow as? AmbientWindow,
+           let displayID = sessions.first(where: { $0.value.window === keyWindow })?.key {
+            disable(displayID: displayID)
+            return
+        }
+
+        let mouseLocation = NSEvent.mouseLocation
+        if let screen = NSScreen.screens.first(where: { NSMouseInRect(mouseLocation, $0.frame, false) }),
+           let displayID = screen.displayID,
+           sessions[displayID] != nil {
+            disable(displayID: displayID)
         }
     }
 
@@ -108,7 +134,8 @@ final class AmbientOverlayController {
     }
 
     private func observeScreenChanges() {
-        removeScreenObserver()
+        guard screenObserver == nil else { return }
+
         screenObserver = NotificationCenter.default.addObserver(
             forName: NSApplication.didChangeScreenParametersNotification,
             object: nil,
@@ -126,13 +153,27 @@ final class AmbientOverlayController {
     }
 
     private func handleScreenChange() {
-        guard let session else { return }
+        let activeDisplayIDs = Set(NSScreen.screens.compactMap(\.displayID))
+        let missingDisplayIDs = sessions.keys.filter { !activeDisplayIDs.contains($0) }
 
-        guard let screen = NSScreen.screens.first(where: { $0.displayID == session.displayID }) else {
-            disable()
-            return
+        for displayID in missingDisplayIDs {
+            tearDownSession(displayID: displayID)
         }
 
-        session.window.setFrame(screen.visibleFrame, display: true)
+        for (displayID, session) in sessions {
+            guard let screen = NSScreen.screens.first(where: { $0.displayID == displayID }) else {
+                continue
+            }
+            session.window.setFrame(screen.visibleFrame, display: true)
+        }
+
+        if sessions.isEmpty {
+            removeEscapeMonitor()
+            removeScreenObserver()
+        }
+
+        if !missingDisplayIDs.isEmpty {
+            onStateChange?()
+        }
     }
 }
