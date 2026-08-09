@@ -4,6 +4,8 @@
 
 Daydream is a small Mac menu bar app that puts floating bubbles on any screen you choose. Each display can daydream on its own.
 
+Right now Daydream only mimics the classic Windows Bubbles screensaver. The longer-term plan is to make scenes modular so you can swap in different ambient daydreams, not just bubbles.
+
 ## Download
 
 When a GitHub Release is available, download its ZIP or DMG from the [Releases page](../../releases). You do not need to clone or compile the project to use a release.
